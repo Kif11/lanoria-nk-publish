@@ -129,14 +129,17 @@ class NukePublish(object):
 
         return v
 
-    def save_scene(self, scene_path):
+    def save_scene(self, scene_path, read_only=False):
 
         # Create parent folder if not exists
         if not scene_path.parent.exists():
             scene_path.parent.mkdir(parents=True)
 
-        scene_path = str(scene_path)
         nuke.scriptSaveAs(str(scene_path))
+
+        if read_only:
+            # Set file to read-only
+            scene_path.chmod(0o444)
 
     def publish(self):
 
@@ -165,11 +168,11 @@ class NukePublish(object):
         pre_pub.run()
 
         # Save published scene
-        self.save_scene(publish_nuke_path)
+        self.save_scene(publish_nuke_path, read_only=True)
 
         # Version current scene up
-        publish_version = current_version + 1
-        context.update({'version': publish_version})
+        new_working_version = current_version + 1
+        context.update({'version': new_working_version})
         self.project_path.set_template('nuke_working_file')
         working_nuke_path = self.project_path.apply_fields(context)
         # Save current working scene
@@ -177,5 +180,5 @@ class NukePublish(object):
 
         log.info('Published to ', publish_nuke_path)
 
-        msg = ('Version %s successfully published!' % publish_version)
+        msg = ('Version %s successfully published!' % current_version)
         nuke.message(msg)
