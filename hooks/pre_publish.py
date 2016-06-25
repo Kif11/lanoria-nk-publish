@@ -13,11 +13,10 @@ class PrePublishHook(object):
         self.args = args
         self.kwargs = kwargs
 
-    def make_relative(self):
+    def make_relative(self, project_root):
 
         project_settings = nuke.root()
         outside_nodes = []
-        project_root = self.kwargs['root_dir']
 
         # Set Nuke project
         project_settings['project_directory'].setValue(str(project_root))
@@ -83,6 +82,18 @@ class PrePublishHook(object):
 
             raise Exception(msg)
 
+    def set_on_script_load_callback(self):
+
+        cmd = (
+            'import on_script_open\n'
+            'on_script_open.run()'
+        )
+
+        nuke.root().knob('onScriptLoad').setValue(cmd)
+
+        log.debug('On Script Load callback is set')
+
     def run(self):
         log.info('Running pre-publish hook')
-        self.make_relative()
+        self.make_relative(self.kwargs.get('project_root'))
+        self.set_on_script_load_callback()
