@@ -9,6 +9,9 @@ from logger import Logger
 import hooks
 reload (hooks)
 from hooks import PrePublishHook
+import box_util
+reload(box_util)
+from box_util import BoxUtil
 
 log = Logger()
 
@@ -32,40 +35,24 @@ class PathTemplates(object):
 
 
 class ProjectPath(object):
-    """docstring for ProjectPath"""
+    """
+    Class for handeling all project context and path resolution
+    It make use of PathTemplates class to resolve files locations
+    """
+
     def __init__(self):
         self.path_teplates = PathTemplates()
+        self.boxutil = BoxUtil()
         self.root = self.get_root()
         self.template = None
         self.version_padding = 3
 
     def get_root(self):
-        # project_root = Path(os.environ['PROJECT_ROOT'])
-
-        box_conf_file = ''
-
-        if sys.platform == 'darwin':
-            user = os.environ['USER']
-            box_conf_file = Path('/Users/%s/Library/Application Support/Box/Box Sync/sync_root_folder.txt' % user)
-        elif sys.platform == 'win32':
-            user = os.environ['USERNAME']
-            box_conf_file = Path('C:/Users/%s/AppData/Local/Box Sync/sync_root_folder.txt' %  user)
-        else:
-            log.error('Failed to identify current OS: %s' % sys.platform)
-
-        # Read box root path from config file
-        # It will return empty string if box is not launched
-        with box_conf_file.open() as f:
-            data = f.read()
-
-        if data:
-            project_root = Path(data)
-        else:
-            # Path from config file is empty
-            # Most likely that Box Sync is not running
-            raise Exception(
-                'Box Sync is not running. Please stat Box Sync app first.'
-            )
+        """
+        Retrive project root directory
+        In this case it is BoxSync application root directory on user machine
+        """
+        project_root = self.boxutil.get_storage_root()
 
         return project_root
 
@@ -73,11 +60,13 @@ class ProjectPath(object):
         self.template = self.path_teplates[template_name]
 
     def apply_fields(self, context):
+        """
+        Given context dictionary apply its field to given template path
+        """
 
         path = self.template
 
         for k, v in context.items():
-            # print 'Key: ', key, 'Val: ', v
             if k == 'version':
                 v = str(v).zfill(self.version_padding)
             key = '{%s}' % k
@@ -86,13 +75,24 @@ class ProjectPath(object):
         return Path(path)
 
     def context_from_path(self, path):
+        """
+        Given a file path try to pupulate
+        the context by using current template
+
+        Note:
+
+        This procedu is not robust and might produce unexpected result
+        since we can have the following situation:
+            1. {shot}/{step} with SH01/comp
+            2. {shot}/{step} with Room/comp
+        In second case it will populate shot field with an asset name
+        which is not desired
+
+        """
 
         context = {'project_root': self.root}
         templ_val = self.template.parent.parts[1:]
         path_val = Path(path).relative_to(self.root).parent.parts
-
-        print 'TEMPL_VAL: ', templ_val
-        print 'PATH_VAL: ', path_val
 
         if len(templ_val) != len(path_val):
             raise Exception('Path %s does not match %s template' % (path_val, templ_val))
@@ -102,8 +102,6 @@ class ProjectPath(object):
             if result is not None:
                 templ_key = result.group(2)
                 context[templ_key] = v
-
-        print 'CONTEXT: ', context
 
         return context
 
@@ -115,6 +113,7 @@ class NukePublish(object):
 
     def _get_scene_path(self):
         current_scene = Path(nuke.root().knob('name').value())
+
         return current_scene
 
     def _get_version_from_name(self, name):
@@ -144,6 +143,13 @@ class NukePublish(object):
         log.info('Publishing...')
 
         current_scene_path = self._get_scene_path()
+
+        if current_scene_path == Path():
+            raise Exception (
+                'Can not determine current scene path. '
+                'Probably scene is not saved.'
+            )
+
         current_version = self._get_version_from_name(current_scene_path.name)
 
         self.project_path.set_template('nuke_publish_file')
@@ -155,7 +161,7 @@ class NukePublish(object):
         publish_nuke_path = self.project_path.apply_fields(context)
 
         # Run prepublish hook
-        pre_pub = PrePublishHook(root_dir=self.project_path.root)
+        pre_pub = PrePublishHook(project_root=self.project_path.root)
         pre_pub.run()
 
         # Save published scene
