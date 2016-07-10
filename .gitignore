@@ -64,3 +64,6 @@ target/
 # Mac
 
 .DS_Store
+
+# Temp
+dump.py
