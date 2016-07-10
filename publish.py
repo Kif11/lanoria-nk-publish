@@ -210,103 +210,102 @@ class NukePublish(object):
     def publish(self, ui):
 
         log.info('Publishing...')
-        time.sleep(3)
-        # log.debug('Current version: %s' % self.current_version)
-        # log.debug('Latest working version: %s' % self.latest_working_version)
-        # log.debug('Latest publish version: %s' % self.latest_publish_version)
-        # log.debug('Master version: %s' % self.master_version)
-        #
-        # # Check if user try to create a publish not from the lates version
-        # if not self.pdm.promote_version:
-        #     if self.current_version < self.master_version:
-        #         msg = (
-        #             'Your current file version is %s. '
-        #             'However there is version %s of this file exists. '
-        #             'Are you sure you want to promote this version to the latest?'
-        #             % (self.current_version,  self.master_version)
-        #         )
-        #         self.pdm.msg_type = 'promote_version'
-        #         ui.info_msg.emit(msg)
-        #         return
-        #
-        # if self.pdm.save_as_working:
-        #     self.save_as_working()
-        #     log.info('Working version number %s created' % (int(self.master_version) + 1))
-        #
-        # # Check if user trying to publish from publish area
-        # elif str(self.current_scene_path).startswith(str(self.publish_area)):
-        #     msg = (
-        #         'This file is in the publish directory. '
-        #         'Do you want to save it to working?'
-        #     )
-        #     self.pdm.msg_type = 'save_as_working'
-        #     ui.info_msg.emit(msg)
-        #     return
-        #
-        # # Case where user copied latest publish version to working
-        # if self.current_version == self.latest_publish_version:
-        #     log.info(
-        #         'Publish v%03d already exist. Version up.'
-        #         % self.latest_publish_version
-        #     )
-        #     self.master_version = self.master_version + 1
-        #
-        # # Run pre-publish hook
-        # pre_pub = PrePublishHook(project_root=self.pm.root)
-        # pre_pub.run()
-        #
-        # # unpublished_dep = self.get_unpublished_dep()
-        #
-        # # for i in unpublished_dep:
-        # #     self.sgmng.create_publish
-        #
-        # # import pdb; pdb.set_trace()
-        #
-        # # Upload Nuke file to Box
-        #
-        # self.bm.authenticate()
-        # published_file = self.upload_publish()
-        #
-        # if published_file is None:
-        #     msg = (
-        #         'Failed to upload %s file to BOX. '
-        #         'Most likely because this file already exists on BOX.'
-        #         % self.current_scene_path.name
-        #     )
-        #     log.error(msg)
-        #     self.pdm.msg_type = 'box_upload_fail'
-        #     ui.info_msg.emit(msg)
-        #     return
-        # else:
-        #     log.info('File %s successfully uploaded to Box' % published_file.name)
-        #
-        # publish_name = '{shot}_{task}'.format(**self.ctx)
-        #
-        # # Publish Nuke file to Shotgun
-        # nuke_publish_path = self._get_publish_nuke_path(self.master_version)
-        # nuke_relative_path = nuke_publish_path.relative_to(self.pm.root)
-        #
-        # sg_publish = self.sgmng.create_publish(
-        #     shot = self.ctx.get('shot'),
-        #     task = self.ctx.get('task'),
-        #     name = publish_name,
-        #     code =  str(nuke_relative_path.name),
-        #     version_number = self.master_version,
-        #     local_path = str(nuke_relative_path),
-        #     description = self.pdm.comment,
-        #     publish_file_type = 'Nuke Script',
-        #     box_link = published_file.get_shared_link_download_url(),
-        #     box_id = published_file.id,
-        # )
-        #
-        # log.info('File %s successfully published to Shotgun' % sg_publish['code'])
-        #
-        # # Save Nuke file localy as a new working version
-        # if not self.pdm.save_as_working:
-        #     self.save_as_working()
-        #
-        # msg = ('Version %s successfully published!' % self.master_version)
-        # log.info(msg)
+        log.debug('Current version: %s' % self.current_version)
+        log.debug('Latest working version: %s' % self.latest_working_version)
+        log.debug('Latest publish version: %s' % self.latest_publish_version)
+        log.debug('Master version: %s' % self.master_version)
+
+        # Check if user try to create a publish not from the lates version
+        if not self.pdm.promote_version:
+            if self.current_version < self.master_version:
+                msg = (
+                    'Your current file version is %s. '
+                    'However there is version %s of this file exists. '
+                    'Are you sure you want to promote this version to the latest?'
+                    % (self.current_version,  self.master_version)
+                )
+                self.pdm.msg_type = 'promote_version'
+                ui.info_msg.emit(msg)
+                return
+
+        if self.pdm.save_as_working:
+            self.save_as_working()
+            log.info('Working version number %s created' % (int(self.master_version) + 1))
+
+        # Check if user trying to publish from publish area
+        elif str(self.current_scene_path).startswith(str(self.publish_area)):
+            msg = (
+                'This file is in the publish directory. '
+                'Do you want to save it to working?'
+            )
+            self.pdm.msg_type = 'save_as_working'
+            ui.info_msg.emit(msg)
+            return
+
+        # Case where user copied latest publish version to working
+        if self.current_version == self.latest_publish_version:
+            log.info(
+                'Publish v%03d already exist. Version up.'
+                % self.latest_publish_version
+            )
+            self.master_version = self.master_version + 1
+
+        # Run pre-publish hook
+        pre_pub = PrePublishHook(project_root=self.pm.root)
+        pre_pub.run()
+
+        # unpublished_dep = self.get_unpublished_dep()
+
+        # for i in unpublished_dep:
+        #     self.sgmng.create_publish
+
+        # import pdb; pdb.set_trace()
+
+        # Upload Nuke file to Box
+
+        self.bm.authenticate()
+        published_file = self.upload_publish()
+
+        if published_file is None:
+            msg = (
+                'Failed to upload %s file to BOX. '
+                'Most likely because this file already exists on BOX.'
+                % self.current_scene_path.name
+            )
+            log.error(msg)
+            self.pdm.msg_type = 'box_upload_fail'
+            ui.info_msg.emit(msg)
+            return
+        else:
+            log.info('File %s successfully uploaded to Box' % published_file.name)
+
+        publish_name = '{shot}_{task}'.format(**self.ctx)
+
+        # Publish Nuke file to Shotgun
+        nuke_publish_path = self._get_publish_nuke_path(self.master_version)
+        nuke_relative_path = nuke_publish_path.relative_to(self.pm.root)
+
+        sg_publish = self.sgmng.create_publish(
+            shot = self.ctx.get('shot'),
+            task = self.ctx.get('task'),
+            name = publish_name,
+            code =  str(nuke_relative_path.name),
+            version_number = self.master_version,
+            local_path = str(nuke_relative_path),
+            description = self.pdm.comment,
+            publish_file_type = 'Nuke Script',
+            box_link = published_file.get_shared_link_download_url(),
+            box_id = published_file.id,
+        )
+
+        log.info('File %s successfully published to Shotgun' % sg_publish['code'])
+
+        # Save Nuke file localy as a new working version
+        if not self.pdm.save_as_working:
+            self.save_as_working()
+
+        msg = ('Version %s successfully published!' % self.master_version)
+        log.info(msg)
         ui.is_done.emit(True)
 
 class PublishWorker(QtCore.QThread):
