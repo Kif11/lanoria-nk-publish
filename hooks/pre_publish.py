@@ -1,10 +1,12 @@
 import os
 import sys
+# import logging as log
 from pathlib import Path
-from logger import Logger
 import nuke
 
+from logger import Logger
 log = Logger()
+
 
 class PrePublishHook(object):
     """docstring for PrePublishHook"""
@@ -14,6 +16,8 @@ class PrePublishHook(object):
         self.kwargs = kwargs
 
     def make_relative(self, project_root):
+
+        log.info('Fixing all paths to relative...')
 
         project_settings = nuke.root()
         outside_nodes = []
@@ -29,8 +33,7 @@ class PrePublishHook(object):
             if n.Class() not in ['Read', 'Camera2', 'DeepRead', 'ReadGeo2']:
                 continue
 
-            log.line()
-            log.debug('Processing Node: %s, Type: %s ' % (n.name(), n.Class()))
+            log.debug('Repath node: %s, Type: %s ' % (n.name(), n.Class()))
 
             read_path = Path(n['file'].value())
 
@@ -91,7 +94,7 @@ class PrePublishHook(object):
 
         nuke.root().knob('onScriptLoad').setValue(cmd)
 
-        log.debug('On Script Load callback is set')
+        log.debug('"On Script Load" callback is set')
 
     def run(self):
         log.info('Running pre-publish hook')
