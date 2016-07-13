@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+import traceback
 # import logging as log
 from logger import Logger
 import nuke
@@ -207,13 +208,17 @@ class NukePublish(object):
 
         return not_published_dependencies
 
-    def publish(self, ui):
+    def publish(self, ui=None):
 
         log.info('Publishing...')
         log.debug('Current version: %s' % self.current_version)
         log.debug('Latest working version: %s' % self.latest_working_version)
         log.debug('Latest publish version: %s' % self.latest_publish_version)
         log.debug('Master version: %s' % self.master_version)
+
+        if ui is None
+            self.pdm.promote_version = True
+            self.pdm.save_as_working = True
 
         # Check if user try to create a publish not from the lates version
         if not self.pdm.promote_version:
@@ -225,7 +230,10 @@ class NukePublish(object):
                     % (self.current_version,  self.master_version)
                 )
                 self.pdm.msg_type = 'promote_version'
-                ui.info_msg.emit(msg)
+                if ui is not None:
+                    ui.info_msg.emit(msg)
+                else:
+                    log.warning(msg)
                 return
 
         if self.pdm.save_as_working:
@@ -239,7 +247,10 @@ class NukePublish(object):
                 'Do you want to save it to working?'
             )
             self.pdm.msg_type = 'save_as_working'
-            ui.info_msg.emit(msg)
+            if ui is not None:
+                ui.info_msg.emit(msg)
+            else:
+                log.warning(msg)
             return
 
         # Case where user copied latest publish version to working
@@ -274,7 +285,10 @@ class NukePublish(object):
             )
             log.error(msg)
             self.pdm.msg_type = 'box_upload_fail'
-            ui.info_msg.emit(msg)
+            if ui is not None:
+                ui.info_msg.emit(msg)
+            else:
+                log.error(msg)
             return
         else:
             log.info('File %s successfully uploaded to Box' % published_file.name)
@@ -306,7 +320,11 @@ class NukePublish(object):
 
         msg = ('Version %s successfully published!' % self.master_version)
         log.info(msg)
-        ui.is_done.emit(True)
+
+        if ui is not None:
+            ui.is_done.emit(True)
+        else:
+            log.info('Published!')
 
 class PublishWorker(QtCore.QThread):
 
@@ -326,6 +344,7 @@ class PublishWorker(QtCore.QThread):
             self.np.publish(self)
         except Exception as e:
             log.error('Error happened while publishing the scene!')
+            traceback.print_exc(file=sys.stdout)
             log.debug(e)
             self.is_done.emit(False)
 
