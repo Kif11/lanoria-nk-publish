@@ -22,8 +22,9 @@ class PrePublishHook(object):
         project_settings = nuke.root()
         outside_nodes = []
 
-        # Set Nuke project
-        project_settings['project_directory'].setValue(str(project_root))
+        # Set Nuke project, always need to be Unix style since Nuke need it
+        project_path = str(project_root).replace('\\', '/')
+        project_settings['project_directory'].setValue(project_path)
 
         for n in nuke.allNodes():
 
@@ -33,7 +34,7 @@ class PrePublishHook(object):
             if n.Class() not in ['Read', 'Camera2', 'DeepRead', 'ReadGeo2']:
                 continue
 
-            log.debug('Repath node: %s, Type: %s ' % (n.name(), n.Class()))
+            # log.debug('Repath node: %s, Type: %s ' % (n.name(), n.Class()))
 
             read_path = Path(n['file'].value())
 
@@ -44,7 +45,6 @@ class PrePublishHook(object):
             # Path point to project root
             if str(read_path).startswith(str(project_root)):
                 # Make it relative
-                log.debug('Changed to relative.')
                 relative_path = read_path.relative_to(project_root)
                 n['file'].setValue(str(relative_path))
                 continue
@@ -96,7 +96,27 @@ class PrePublishHook(object):
 
         log.debug('"On Script Load" callback is set')
 
+    def set_on_script_save_callback(self):
+        cmd = (
+            'import on_script_save\n'
+            'on_script_save.run()'
+        )
+        nuke.root().knob('onScriptSave').setValue(cmd)
+
+        log.debug('"On Script Save" callback is set')
+
+    def set_on_script_close_callback(self):
+        cmd = (
+            'import on_script_close\n'
+            'on_script_close.run()'
+        )
+        nuke.root().knob('onScriptClose').setValue(cmd)
+
+        log.debug('"On Script Close" callback is set')
+
     def run(self):
         log.info('Running pre-publish hook')
         self.make_relative(self.kwargs.get('project_root'))
         self.set_on_script_load_callback()
+        self.set_on_script_save_callback()
+        self.set_on_script_close_callback()

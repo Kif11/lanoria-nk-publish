@@ -3,9 +3,10 @@
 CURDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 NUKEPATH="/Applications/Nuke9.0v8/Nuke9.0v8.app/Contents/MacOS/Nuke9.0v8"
 
-export PYTHONPATH=$CURDIR
-export PYTHONPATH=${PYTHONPATH}:/Users/kif/Documents/AnimationMentor/panda/Assets/tools/lib/working/nuke/python
-export PYTHONPATH=${PYTHONPATH}:/Users/kif/Documents/AnimationMentor/panda/Assets/tools/lib/working/nuke/startup
+source /Users/kif/BoxSync/LaNoria/Tools/nuke/config/nuke_env.sh
+# export PYTHONPATH=$CURDIR
+# export PYTHONPATH=${PYTHONPATH}:/Users/kif/Documents/AnimationMentor/panda/Assets/tools/lib/working/nuke/python
+# export PYTHONPATH=${PYTHONPATH}:/Users/kif/Documents/AnimationMentor/panda/Assets/tools/lib/working/nuke/startup
 
 COMMAND="$1"
 

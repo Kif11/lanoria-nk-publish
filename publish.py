@@ -50,8 +50,7 @@ log = Logger()
 # cause validation failures. You can upgrade to a newer version of Python to
 # solve this. For more information, see https://urllib3.readthedocs.org/en/
 # latest/security.html snimissingwarning.
-import warnings
-warnings.filterwarnings("ignore")
+import warnings; warnings.filterwarnings("ignore")
 
 class PublishDialogModel(object):
     """
@@ -143,7 +142,11 @@ class NukePublish(object):
 
     def _scan_for_latest_version(self, directory):
 
-        scaned_files = os.listdir(str(directory))
+        if directory.exists():
+            scaned_files = os.listdir(str(directory))
+        else:
+            log.debug('Tried to scan for versions but directory doesn not exists %s' % directory)
+            scaned_files = []
 
         # If files in directory
         if len(scaned_files) == 0:
@@ -208,15 +211,18 @@ class NukePublish(object):
 
         return not_published_dependencies
 
+    def is_published_file(self):
+        return str(self.current_scene_path).startswith(str(self.publish_area))
+
     def publish(self, ui=None):
 
         log.info('Publishing...')
-        log.debug('Current version: %s' % self.current_version)
-        log.debug('Latest working version: %s' % self.latest_working_version)
-        log.debug('Latest publish version: %s' % self.latest_publish_version)
-        log.debug('Master version: %s' % self.master_version)
+        # log.debug('Current version: %s' % self.current_version)
+        # log.debug('Latest working version: %s' % self.latest_working_version)
+        # log.debug('Latest publish version: %s' % self.latest_publish_version)
+        # log.debug('Master version: %s' % self.master_version)
 
-        if ui is None
+        if ui is None:
             self.pdm.promote_version = True
             self.pdm.save_as_working = True
 
@@ -241,7 +247,7 @@ class NukePublish(object):
             log.info('Working version number %s created' % (int(self.master_version) + 1))
 
         # Check if user trying to publish from publish area
-        elif str(self.current_scene_path).startswith(str(self.publish_area)):
+        elif self.is_published_file():
             msg = (
                 'This file is in the publish directory. '
                 'Do you want to save it to working?'
@@ -261,6 +267,9 @@ class NukePublish(object):
             )
             self.master_version = self.master_version + 1
 
+        # Make sure that the file is saved
+        # nuke.scriptSaveAs(str(self._get_scene_path()))
+
         # Run pre-publish hook
         pre_pub = PrePublishHook(project_root=self.pm.root)
         pre_pub.run()
@@ -273,7 +282,6 @@ class NukePublish(object):
         # import pdb; pdb.set_trace()
 
         # Upload Nuke file to Box
-
         self.bm.authenticate()
         published_file = self.upload_publish()
 
@@ -339,7 +347,6 @@ class PublishWorker(QtCore.QThread):
     # A QThread is run by calling it's start() function, which calls this run()
     # function in it's own "thread".
     def run(self):
-        # time.sleep(3)
         try:
             self.np.publish(self)
         except Exception as e:
