@@ -143,10 +143,13 @@ class NukePublish(object):
     def _scan_for_latest_version(self, directory):
 
         if directory.exists():
-            scaned_files = os.listdir(str(directory))
+            # List all files in the directory excluding dot hidden files
+            scaned_files = [x for x in directory.glob('*!(.*)')]
         else:
             log.debug('Tried to scan for versions but directory doesn not exists %s' % directory)
             scaned_files = []
+
+        # log.debug('Scaned files: ', scaned_files)
 
         # If files in directory
         if len(scaned_files) == 0:
@@ -221,6 +224,9 @@ class NukePublish(object):
         # log.debug('Latest working version: %s' % self.latest_working_version)
         # log.debug('Latest publish version: %s' % self.latest_publish_version)
         # log.debug('Master version: %s' % self.master_version)
+
+        # Authenticate Shotgun manager
+        self.sgmng.authenticate()
 
         if ui is None:
             self.pdm.promote_version = True
