@@ -79,9 +79,8 @@ class PrePublishHook(object):
             for n in outside_nodes:
                 msg = msg + n.name() + '\n'
 
-            msg += '\nPlease move your files to the project derectory in order to publish'
-
-            nuke.message(msg)
+            msg += '\nPlease move your files to the project derectory in order to continue'
+            log.warning(msg)
 
             raise Exception(msg)
 

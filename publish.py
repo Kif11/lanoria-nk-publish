@@ -141,15 +141,12 @@ class NukePublish(object):
         return v
 
     def _scan_for_latest_version(self, directory):
-
         if directory.exists():
             # List all files in the directory excluding dot hidden files
-            scaned_files = [x for x in directory.glob('*!(.*)')]
+            scaned_files = [str(x) for x in directory.glob('*.nk')]
         else:
             log.debug('Tried to scan for versions but directory doesn not exists %s' % directory)
             scaned_files = []
-
-        # log.debug('Scaned files: ', scaned_files)
 
         # If files in directory
         if len(scaned_files) == 0:
@@ -165,18 +162,18 @@ class NukePublish(object):
 
         return version
 
-    def save_scene(self, scene_path):
+    def save_scene(self, scene_path, overwrite=-1):
         # Create parent folder if not exists
         if not scene_path.parent.exists():
             scene_path.parent.mkdir(parents=True)
 
-        nuke.scriptSaveAs(str(scene_path))
+        nuke.scriptSaveAs(str(scene_path), overwrite)
 
-    def save_as_working(self):
+    def save_as_working(self, overwrite=-1):
         new_working_version = self.master_version + 1
         working_nuke_file = self._get_working_nuke_path(new_working_version)
         # Save current working scene
-        self.save_scene(working_nuke_file)
+        self.save_scene(working_nuke_file, overwrite)
         log.info('New working saved to %s' % working_nuke_file)
 
     def upload_publish(self):
@@ -220,10 +217,10 @@ class NukePublish(object):
     def publish(self, ui=None):
 
         log.info('Publishing...')
-        # log.debug('Current version: %s' % self.current_version)
-        # log.debug('Latest working version: %s' % self.latest_working_version)
-        # log.debug('Latest publish version: %s' % self.latest_publish_version)
-        # log.debug('Master version: %s' % self.master_version)
+        log.debug('Current version: %s' % self.current_version)
+        log.debug('Latest working version: %s' % self.latest_working_version)
+        log.debug('Latest publish version: %s' % self.latest_publish_version)
+        log.debug('Master version: %s' % self.master_version)
 
         # Authenticate Shotgun manager
         self.sgmng.authenticate()
@@ -243,7 +240,7 @@ class NukePublish(object):
                 )
                 self.pdm.msg_type = 'promote_version'
                 if ui is not None:
-                    ui.info_msg.emit(msg)
+                    ui.signals.info_msg.emit(msg)
                 else:
                     log.warning(msg)
                 return
@@ -260,7 +257,7 @@ class NukePublish(object):
             )
             self.pdm.msg_type = 'save_as_working'
             if ui is not None:
-                ui.info_msg.emit(msg)
+                ui.signals.info_msg.emit(msg)
             else:
                 log.warning(msg)
             return
@@ -274,38 +271,35 @@ class NukePublish(object):
             self.master_version = self.master_version + 1
 
         # Make sure that the file is saved
-        # nuke.scriptSaveAs(str(self._get_scene_path()))
+        nuke.scriptSaveAs(str(self._get_scene_path()), overwrite=True)
 
         # Run pre-publish hook
-        pre_pub = PrePublishHook(project_root=self.pm.root)
-        pre_pub.run()
+        try:
+            pre_pub = PrePublishHook(project_root=self.pm.root)
+            pre_pub.run()
+        except Exception as e:
+            if ui is not None:
+                ui.signals.info_msg.emit('%s' % e)
+            return
 
         # unpublished_dep = self.get_unpublished_dep()
 
         # for i in unpublished_dep:
         #     self.sgmng.create_publish
 
-        # import pdb; pdb.set_trace()
-
         # Upload Nuke file to Box
         self.bm.authenticate()
-        published_file = self.upload_publish()
 
-        if published_file is None:
-            msg = (
-                'Failed to upload %s file to BOX. '
-                'Most likely because this file already exists on BOX.'
-                % self.current_scene_path.name
-            )
+        try:
+            published_file = self.upload_publish()
+            log.info('File %s successfully uploaded to Box' % published_file.name)
+        except Exception as e:
+            print e
+            msg = ('Failed to upload file to BOX.')
             log.error(msg)
             self.pdm.msg_type = 'box_upload_fail'
             if ui is not None:
-                ui.info_msg.emit(msg)
-            else:
-                log.error(msg)
-            return
-        else:
-            log.info('File %s successfully uploaded to Box' % published_file.name)
+                ui.signals.info_msg.emit(msg)
 
         publish_name = '{shot}_{task}'.format(**self.ctx)
 
@@ -336,18 +330,20 @@ class NukePublish(object):
         log.info(msg)
 
         if ui is not None:
-            ui.is_done.emit(True)
+            ui.signals.is_done.emit(True)
         else:
             log.info('Published!')
 
-class PublishWorker(QtCore.QThread):
-
+class WorkerSignals(QtCore.QObject):
     is_done = QtCore.Signal(bool)
     is_msg = QtCore.Signal(bool)
     info_msg = QtCore.Signal(str)
 
+class PublishWorker(QtCore.QThread):
+
     def __init__(self):
-        QtCore.QThread.__init__(self)
+        super(PublishWorker, self).__init__()
+        self.signals = WorkerSignals()
         self.np = NukePublish()
 
     # A QThread is run by calling it's start() function, which calls this run()
@@ -359,7 +355,13 @@ class PublishWorker(QtCore.QThread):
             log.error('Error happened while publishing the scene!')
             traceback.print_exc(file=sys.stdout)
             log.debug(e)
-            self.is_done.emit(False)
+            self.signals.is_done.emit(False)
+
+    def stop(self):
+        self.terminate()
+
+    # def __del__(self):
+    #     print '[D] Working thread destructor was called'
 
 class PublishDialog(QtGui.QWidget):
 
@@ -374,6 +376,7 @@ class PublishDialog(QtGui.QWidget):
 
         self.ui.publish_btn.clicked.connect(self.publish)
         self.ui.info_btn.accepted.connect(self.info_btn_accepted)
+        self.ui.close_btn.clicked.connect(self.close_ui)
 
         self.ui.result_msg.hide()
 
@@ -383,9 +386,8 @@ class PublishDialog(QtGui.QWidget):
 
     def prepare(self):
         self.worker = PublishWorker()
-        self.worker.is_done.connect(self.publish_result)
-        self.worker.is_msg.connect(self.display_msg)
-        self.worker.info_msg.connect(self.display_info_msg)
+        self.worker.signals.is_done.connect(self.publish_result)
+        self.worker.signals.info_msg.connect(self.display_info_msg)
 
         # Set UI to original state
         self.ui.comment_label.show()
@@ -393,6 +395,11 @@ class PublishDialog(QtGui.QWidget):
         self.ui.publish_btn.show()
         self.ui.publish_comment.clear()
         self.ui.publish_comment.show()
+
+    def close_ui(self):
+        log.debug('Exiting application')
+        self.worker.stop()
+        self.close()
 
     def info_btn_accepted(self):
         if self.pdm.msg_type == 'save_as_working':
@@ -446,6 +453,9 @@ class PublishDialog(QtGui.QWidget):
 
 
 if __name__ == '__main__':
+    # Nuke test
+    # import nk_publish; reload(nk_publish); from nk_publish import NukePublish; NukePublish().publish()
+
     nuke.scriptOpen('/Users/kif/BoxSync/LaNoria/Shots/lacaja_test/test_seq/test_shot_6/working/comp/nuke/test_shot_6_comp_v001.nk')
     np = NukePublish()
     np.publish()

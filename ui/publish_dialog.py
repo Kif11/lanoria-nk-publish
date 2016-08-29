@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'resources/publish_dialog.ui'
 #
-# Created: Sat Jul  9 13:52:06 2016
+# Created: Sun Aug 28 20:33:56 2016
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
