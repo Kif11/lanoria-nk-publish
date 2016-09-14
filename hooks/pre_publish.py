@@ -1,6 +1,7 @@
-import os
-import sys
-# import logging as log
+#!/usr/bin/env python
+# author: Kirill Kovalevskiy
+# e-mail: kovalewskiy@gmail.com
+
 from pathlib import Path
 import nuke
 

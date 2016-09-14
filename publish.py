@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# author: Kirill Kovalevskiy
+# e-mail: kovalewskiy@gmail.com
+
 # Python and Nuke STL
 import os
 import re
@@ -31,14 +35,8 @@ from dependencies import NukeDependencies
 
 from PySide import QtGui, QtCore
 from ui import Ui_PublishDialog
-# app = QtGui.QApplication(sys.argv)
 
-# log.basicConfig(
-#     format='%(levelname)s: %(message)s',
-#     # level=log.DEBUG,
-#     disable_existing_loggers=False
-# )
-
+# Global variables
 log = Logger()
 
 # Supress SSL warning
