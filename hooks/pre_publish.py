@@ -46,7 +46,9 @@ class PrePublishHook(object):
             if str(read_path).startswith(str(project_root)):
                 # Make it relative
                 relative_path = read_path.relative_to(project_root)
-                n['file'].setValue(str(relative_path))
+                # Path should always be forward slashed in Nuke
+                relative_path = str(relative_path).replace('\\', '/')
+                n['file'].setValue(relative_path)
                 continue
             # Path point outside of the project root
             else:
