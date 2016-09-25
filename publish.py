@@ -83,8 +83,8 @@ class NukePublish(object):
         self.publish_area = self._get_publish_area()
         self.working_area = self._get_working_area()
         self.current_version = self._get_current_version()
-        self.latest_working_version = self._scan_for_latest_version(self._get_working_nuke_path().parent)
-        self.latest_publish_version = self._scan_for_latest_version(self._get_publish_nuke_path().parent)
+        self.latest_working_version = self.pm.scan_for_latest_version(self._get_working_nuke_path().parent)
+        self.latest_publish_version = self.pm.scan_for_latest_version(self._get_publish_nuke_path().parent)
         self.master_version = int(sorted([self.current_version, self.latest_working_version, self.latest_publish_version])[-1:][0])
 
     def _get_scene_path(self):
@@ -148,33 +148,6 @@ class NukePublish(object):
             )
 
         return v
-
-    def _scan_for_latest_version(self, directory):
-        """
-        Given a directory go through every file in that directory and determine
-        the highest version number base on regular expression pattern
-        """
-
-        if directory.exists():
-            # List all files in the directory excluding dot hidden files
-            scanned_files = [str(x) for x in directory.glob('*.nk')]
-        else:
-            log.debug('Tried to scan for versions but directory does not exists %s' % directory)
-            scanned_files = []
-
-        # If files in directory
-        if len(scanned_files) == 0:
-            version = 1
-        # If there are files find the last version
-        else:
-            version_list = []
-            for f in scanned_files:
-                search = re.search(r'(?<=v)[0-9]+', f)
-                if search:
-                    version_list.append(int(search.group()))
-            version = sorted(version_list)[-1:][0]
-
-        return version
 
     def save_scene(self, scene_path, overwrite=-1):
         # Create parent folder if not exists
