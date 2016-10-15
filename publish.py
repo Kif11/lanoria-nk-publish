@@ -67,7 +67,7 @@ if len(lg.handlers) == 1:
 
 log.root.setLevel('DEBUG')
 
-log.debug('LOG HANDLERS: %s' % lg.handlers)
+# log.debug('LOG HANDLERS: %s' % lg.handlers)
 
 # Supress SSL warning
 # /Library/Python/2.7/site-packages/requests/packages/urllib3/util/ssl_.py:318:
@@ -243,8 +243,6 @@ class NukePublish(object):
         log.debug('Latest working version: %s' % self.latest_working_version)
         log.debug('Latest publish version: %s' % self.latest_publish_version)
         log.debug('Master version: %s' % self.master_version)
-
-        return None
 
         # Authenticate Shotgun manager
         self.sgmng.authenticate()
