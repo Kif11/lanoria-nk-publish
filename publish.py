@@ -7,8 +7,10 @@ import os
 import re
 import sys
 import traceback
-# import logging as log
-from logger import Logger
+import time
+import platform
+import logging as log
+from logging.handlers import TimedRotatingFileHandler
 import nuke
 
 # Custom modules
@@ -32,12 +34,40 @@ from project_manager import ProjectManager
 from sgmng import ShotgunManager
 from boxmng import BoxManager
 from dependencies import NukeDependencies
+from log.formatters import BracketFormatter
 
 from PySide import QtGui, QtCore
 from ui import Ui_PublishDialog
 
-# Global variables
-log = Logger()
+fmt = BracketFormatter()
+lg = log.getLogger()
+app_name = __name__.split('.')[0]
+
+# Log files location for this app
+log_file = os.path.join(
+    os.environ['PROJECT_ROOT'],
+    'Tools', 'logs', app_name,
+    platform.node(), app_name
+)
+log_folder = os.path.dirname(log_file)
+# Create log directory if not exists
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
+
+# Make sure that there is two log handlers at all time
+# Specifically a stream handler and time rotating file handler
+if len(lg.handlers) == 1:
+    stream_handler = lg.handlers[0]
+    file_handler = TimedRotatingFileHandler(log_file, when="midnight")
+    file_handler.suffix = "%Y-%m-%d.log"
+
+    file_handler.setFormatter(fmt)
+    stream_handler.setFormatter(fmt)
+    log.root.addHandler(file_handler)
+
+log.root.setLevel('DEBUG')
+
+log.debug('LOG HANDLERS: %s' % lg.handlers)
 
 # Supress SSL warning
 # /Library/Python/2.7/site-packages/requests/packages/urllib3/util/ssl_.py:318:
@@ -99,6 +129,7 @@ class NukePublish(object):
                 'Probably scene is not saved.'
             )
             nuke.message(msg)
+            log.warning(msg)
             raise Exception (msg)
 
         return current_scene
@@ -142,10 +173,12 @@ class NukePublish(object):
         if result:
             v = int(result.group(2))
         else:
-            raise Exception(
+            msg = (
                 'Can not determine Publish Version from the file name '
                 'Make sure that you use v### naming convention in your file name'
             )
+            log.error(msg)
+            raise Exception(msg)
 
         return v
 
@@ -201,11 +234,17 @@ class NukePublish(object):
 
     def publish(self, ui=None):
 
-        log.info('Publishing...')
+        time_stamp = time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime())
+        log.info('-'*80)
+        log.info('Running publish procedure %s' % time_stamp)
+        log.info('-'*80)
+
         log.debug('Current version: %s' % self.current_version)
         log.debug('Latest working version: %s' % self.latest_working_version)
         log.debug('Latest publish version: %s' % self.latest_publish_version)
         log.debug('Master version: %s' % self.master_version)
+
+        return None
 
         # Authenticate Shotgun manager
         self.sgmng.authenticate()
