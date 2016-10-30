@@ -5,8 +5,9 @@
 from pathlib import Path
 import nuke
 
-from logger import Logger
-log = Logger()
+import logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 class PrePublishHook(object):

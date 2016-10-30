@@ -9,7 +9,7 @@ import sys
 import traceback
 import time
 import platform
-import logging as log
+import logging
 from logging.handlers import TimedRotatingFileHandler
 import nuke
 
@@ -39,35 +39,10 @@ from log.formatters import BracketFormatter
 from PySide import QtGui, QtCore
 from ui import Ui_PublishDialog
 
-fmt = BracketFormatter()
-lg = log.getLogger()
-app_name = __name__.split('.')[0]
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
-# Log files location for this app
-log_file = os.path.join(
-    os.environ['PROJECT_ROOT'],
-    'Tools', 'logs', app_name,
-    platform.node(), app_name
-)
-log_folder = os.path.dirname(log_file)
-# Create log directory if not exists
-if not os.path.exists(log_folder):
-    os.makedirs(log_folder)
-
-# Make sure that there is two log handlers at all time
-# Specifically a stream handler and time rotating file handler
-if len(lg.handlers) == 1:
-    stream_handler = lg.handlers[0]
-    file_handler = TimedRotatingFileHandler(log_file, when="midnight")
-    file_handler.suffix = "%Y-%m-%d.log"
-
-    file_handler.setFormatter(fmt)
-    stream_handler.setFormatter(fmt)
-    log.root.addHandler(file_handler)
-
-log.root.setLevel('DEBUG')
-
-# log.debug('LOG HANDLERS: %s' % lg.handlers)
+dry_run = os.environ.get('PUBLISH_DRY_RUN')
 
 # Supress SSL warning
 # /Library/Python/2.7/site-packages/requests/packages/urllib3/util/ssl_.py:318:
@@ -78,6 +53,7 @@ log.root.setLevel('DEBUG')
 # solve this. For more information, see https://urllib3.readthedocs.org/en/
 # latest/security.html snimissingwarning.
 import warnings; warnings.filterwarnings("ignore")
+
 
 class PublishDialogModel(object):
     """
@@ -98,6 +74,7 @@ class PublishDialogModel(object):
         if not cls._instance:
             cls._instance = super(cls.__class__, cls).__new__(cls, *args, **kwargs)
         return cls._instance
+
 
 class NukePublish(object):
 
@@ -244,6 +221,9 @@ class NukePublish(object):
         log.debug('Latest publish version: %s' % self.latest_publish_version)
         log.debug('Master version: %s' % self.master_version)
 
+        if dry_run:
+            return
+
         # Authenticate Shotgun manager
         self.sgmng.authenticate()
 
@@ -344,7 +324,7 @@ class NukePublish(object):
 
         log.info('File %s successfully published to Shotgun' % sg_publish['code'])
 
-        # Save Nuke file localy as a new working version
+        # Save Nuke file locally as a new working version
         if not self.pdm.save_as_working:
             self.save_as_working()
 
@@ -356,10 +336,12 @@ class NukePublish(object):
         else:
             log.info('Published!')
 
+
 class WorkerSignals(QtCore.QObject):
     is_done = QtCore.Signal(bool)
     is_msg = QtCore.Signal(bool)
     info_msg = QtCore.Signal(str)
+
 
 class PublishWorker(QtCore.QThread):
 
@@ -382,8 +364,6 @@ class PublishWorker(QtCore.QThread):
     def stop(self):
         self.terminate()
 
-    # def __del__(self):
-    #     print '[D] Working thread destructor was called'
 
 class PublishDialog(QtGui.QWidget):
 
@@ -475,9 +455,16 @@ class PublishDialog(QtGui.QWidget):
 
 
 if __name__ == '__main__':
-    # Nuke test
-    # import nk_publish; reload(nk_publish); from nk_publish import NukePublish; NukePublish().publish()
+    # Command line test
+    import nk_publish; reload(nk_publish); from nk_publish import NukePublish; nuke.scriptOpen('/Users/kif/BoxSync/LaNoria/Shots/lacaja_test/test_seq/test_shot_6/working/comp/nuke/test_shot_6_comp_v001.nk'); NukePublish().publish()
 
-    nuke.scriptOpen('/Users/kif/BoxSync/LaNoria/Shots/lacaja_test/test_seq/test_shot_6/working/comp/nuke/test_shot_6_comp_v001.nk')
-    np = NukePublish()
-    np.publish()
+
+# Use this for texting in nuke
+"""
+os.environ['PUBLISH_DRY_RUN'] = '1'
+import nk_publish
+reload(nk_publish)
+from nk_publish import NukePublish
+np = NukePublish()
+np.publish()
+"""
