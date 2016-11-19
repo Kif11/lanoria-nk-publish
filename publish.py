@@ -91,7 +91,16 @@ class NukePublish(object):
         self.working_area = self._get_working_area()
         self.current_version = self._get_current_version()
         self.latest_working_version = self.pm.scan_for_latest_version(self._get_working_nuke_path().parent)
-        self.latest_publish_version = self.pm.scan_for_latest_version(self._get_publish_nuke_path().parent)
+
+        pub_nuke_path = self._get_publish_nuke_path()
+
+        if not pub_nuke_path.parent.exists():
+            # Make sure that publish directory exists
+            # before passing it to our latest version scanner
+            pub_nuke_path.parent.mkdir(parents=True)
+
+        self.latest_publish_version = self.pm.scan_for_latest_version(pub_nuke_path.parent)
+
         self.master_version = int(sorted([self.current_version, self.latest_working_version, self.latest_publish_version])[-1:][0])
 
     def _get_scene_path(self):
